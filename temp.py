@@ -3,4 +3,4 @@
 import datetime
 
 def print_date() -> str:
-    return datetime.today.date().isoformat()
+    return datetime.date.today().isoformat()
