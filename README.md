@@ -1,3 +1,3 @@
-# Common Utilities
+# CU - Common Utilities
 
-TODO: fill this readme
+Some code which I thought I'll share with the world.

@@ -1,0 +1,4 @@
+# NOTE: Slightly surprisingly, one cannot add comment on the same line as the git-ignore pattern!
+
+# IntelliJ IDE config files
+.idea/*
