@@ -1,10 +1,7 @@
-from decimal import Decimal
 import datetime
+from decimal import Decimal
 
-from pfnav import calculate_pf_nav
-from pfnav import MfTxn
-from pfnav import NavHistory
-from pfnav import TxnType
+from pfnav import MfTxn, NavHistory, TxnType, calculate_pf_nav
 
 
 def test_portfolio_nav_calculation():
@@ -20,39 +17,21 @@ def test_portfolio_nav_calculation():
             mf_name="MF1",
             date=jan1,
             txn_type=TxnType.BUY,
-            units=Decimal('100'),
-            nav=Decimal('100')  # Though nav is in txn, we'll use nav_history
+            units=Decimal("100"),
+            nav=Decimal("100"),  # Though nav is in txn, we'll use nav_history
         ),
-        MfTxn(
-            mf_name="MF2",
-            date=jan2,
-            txn_type=TxnType.BUY,
-            units=Decimal('100'),
-            nav=Decimal('110')
-        )
+        MfTxn(mf_name="MF2", date=jan2, txn_type=TxnType.BUY, units=Decimal("100"), nav=Decimal("110")),
     ]
 
     # NAV history including all dates and funds
     nav_history = NavHistory(
         navs={
-            jan1: {
-                "MF1": Decimal('100'),
-                "MF2": Decimal('100')  # Not used but available
-            },
-            jan2: {
-                "MF1": Decimal('110'),
-                "MF2": Decimal('110')
-            },
-            jan3: {
-                "MF1": Decimal('121'),
-                "MF2": Decimal('132')
-            },
-            jan4: {
-                "MF1": Decimal('110'),
-                "MF2": Decimal('110')
-            },
+            jan1: {"MF1": Decimal("100"), "MF2": Decimal("100")},  # Not used but available
+            jan2: {"MF1": Decimal("110"), "MF2": Decimal("110")},
+            jan3: {"MF1": Decimal("121"), "MF2": Decimal("132")},
+            jan4: {"MF1": Decimal("110"), "MF2": Decimal("110")},
         },
-        current_date=jan4
+        current_date=jan4,
     )
 
     # Calculate portfolio NAV
@@ -65,10 +44,10 @@ def test_portfolio_nav_calculation():
     # Jan 4: back to 1100
 
     expected = [
-        (jan1, Decimal('1000.0')),
-        (jan2, Decimal('1100.0')),
-        (jan3, Decimal('1265.0')),
-        (jan4, Decimal('1100.0')),
+        (jan1, Decimal("1000.0")),
+        (jan2, Decimal("1100.0")),
+        (jan3, Decimal("1265.0")),
+        (jan4, Decimal("1100.0")),
     ]
 
     assert len(result) == len(expected)

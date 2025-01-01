@@ -1,0 +1,26 @@
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.black]
+line-length = 120
+extend-exclude = '''
+# A regex preceded with ^/ will apply only to files and directories
+# in the root of the project.
+^/\.venv
+'''
+
+
+
+[tool.pytest.ini_options]
+pythonpath = [
+  ".",
+]
+filterwarnings = [
+    "error::DeprecationWarning",
+]
+
+
+[tool.ruff]
+line-length = 120
+lint.ignore = ["E721"]
