@@ -2,3 +2,7 @@
 
 # IntelliJ IDE config files
 .idea/*
+
+# .pyc
+*.pyc
+__pycache___/*
