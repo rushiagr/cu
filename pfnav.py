@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 import datetime
 from collections import defaultdict
+from typing import DefaultDict
 from typing import List, Tuple, Dict
 
 
@@ -29,64 +30,79 @@ class NavHistory:
     current_date: datetime.date
 
 
+def _calculate_portfolio_value(
+        holdings: DefaultDict[str, Decimal],
+        navs: Dict[str, Decimal]
+) -> Decimal:
+    """Helper function to calculate portfolio value given holdings and NAVs."""
+    return sum(  # noqa
+        holdings[fund] * navs[fund]
+        for fund in holdings
+        if holdings[fund] != 0
+    )
+
+
 def calculate_pf_nav(
         txns: List[MfTxn],
         nav_history: NavHistory,
         base_nav: Decimal = Decimal('1000.0')
 ) -> List[Tuple[datetime.date, Decimal]]:
-    """Calculate portfolio NAV for all transaction dates and current date."""
-    curr_holdings: Dict[str, Decimal] = defaultdict(Decimal)
+    """Calculate portfolio NAV for all transaction dates and current date.
+
+    Returns NAVs for:
+    1. All transaction dates
+    2. All dates in nav_history between first transaction and current_date
+    """
+    curr_holdings: DefaultDict[str, Decimal] = defaultdict(Decimal)
     pf_navs: List[Tuple[datetime.date, Decimal]] = []
-    txn_dates: List[datetime.date] = sorted(set(txn.date for txn in txns))
+
+    # Get all dates to process (transactions + intermediate dates + current date)
+    all_dates: List[datetime.date] = sorted(set(
+        list(nav_history.navs.keys()) +
+        [txn.date for txn in txns]
+    ))
+
+    # Filter dates between first transaction and current date inclusive
+    first_txn_date = min(txn.date for txn in txns)
+    relevant_dates = [
+        date for date in all_dates
+        if first_txn_date <= date <= nav_history.current_date
+    ]
+
+    # Group transactions by date for efficient processing
     txns_by_date: Dict[datetime.date, List[MfTxn]] = defaultdict(list)
     for txn in txns:
         txns_by_date[txn.date].append(txn)
 
     # Process first date - establish baseline
-    first_date: datetime.date = txn_dates[0]
+    first_date: datetime.date = relevant_dates[0]
     for txn in txns_by_date[first_date]:
         delta: Decimal = txn.units if txn.txn_type == TxnType.BUY else -txn.units
         curr_holdings[txn.mf_name] += delta
 
-    initial_value: Decimal = sum(  # noqa
-        curr_holdings[fund] * nav_history.navs[first_date][fund]
-        for fund in curr_holdings
-        if curr_holdings[fund] != 0
+    initial_value: Decimal = _calculate_portfolio_value(
+        curr_holdings,
+        nav_history.navs[first_date]
     )
     pf_navs.append((first_date, base_nav))
 
     # Process remaining dates
-    for date in txn_dates[1:]:
-        # Calculate current value before today's transactions
-        curr_value: Decimal = sum(  # noqa
-            curr_holdings[fund] * nav_history.navs[date][fund]
-            for fund in curr_holdings
-            if curr_holdings[fund] != 0
+    for date in relevant_dates[1:]:
+        # Calculate value before today's transactions
+        curr_value: Decimal = _calculate_portfolio_value(
+            curr_holdings,
+            nav_history.navs[date]
         )
-
         normalized_nav: Decimal = (curr_value / initial_value) * base_nav
         pf_navs.append((date, normalized_nav))
 
-        # Process today's transactions
+        # Process today's transactions if any
         for txn in txns_by_date[date]:
             delta = txn.units if txn.txn_type == TxnType.BUY else -txn.units
             curr_holdings[txn.mf_name] += delta
 
             # Adjust initial_value to maintain relative growth
-            if txn.txn_type == TxnType.BUY:
-                # New investment's "initial value" should be proportional to current NAV
-                initial_value += (delta * txn.nav) / normalized_nav * base_nav
-            else:
-                # For sells, reduce initial_value proportionally
-                initial_value -= (delta * txn.nav) / normalized_nav * base_nav
-
-    if nav_history.current_date > txn_dates[-1]:
-        curr_value = sum(  # noqa
-            curr_holdings[fund] * nav_history.navs[nav_history.current_date][fund]
-            for fund in curr_holdings
-            if curr_holdings[fund] != 0
-        )
-        normalized_nav = (curr_value / initial_value) * base_nav
-        pf_navs.append((nav_history.current_date, normalized_nav))
+            adjustment: Decimal = (delta * txn.nav) / normalized_nav * base_nav
+            initial_value += adjustment if txn.txn_type == TxnType.BUY else -adjustment
 
     return pf_navs
