@@ -30,9 +30,9 @@ class NavHistory:
     current_date: datetime.date
 
 
-def _calculate_portfolio_value(holdings: DefaultDict[str, Decimal], navs: Dict[str, Decimal]) -> Decimal:
-    """Helper function to calculate portfolio value given holdings and NAVs."""
-    return sum(holdings[fund] * navs[fund] for fund in holdings if holdings[fund] != 0)  # noqa
+def _calculate_portfolio_value(units: DefaultDict[str, Decimal], navs: Dict[str, Decimal]) -> Decimal:
+    """Helper function to calculate portfolio value given units and NAVs."""
+    return sum(units[fund] * navs[fund] for fund in units if units[fund] != 0)  # noqa
 
 
 def calculate_pf_nav(
@@ -44,7 +44,7 @@ def calculate_pf_nav(
     1. All transaction dates
     2. All dates in nav_history between first transaction and current_date
     """
-    curr_holdings: DefaultDict[str, Decimal] = defaultdict(Decimal)
+    curr_units: DefaultDict[str, Decimal] = defaultdict(Decimal)
     pf_navs: List[Tuple[datetime.date, Decimal]] = []
 
     # Get all dates to process (transactions + intermediate dates + current date)
@@ -63,22 +63,22 @@ def calculate_pf_nav(
     first_date: datetime.date = relevant_dates[0]
     for txn in txns_by_date[first_date]:
         delta: Decimal = txn.units if txn.txn_type == TxnType.BUY else -txn.units
-        curr_holdings[txn.mf_name] += delta
+        curr_units[txn.mf_name] += delta
 
-    initial_value: Decimal = _calculate_portfolio_value(curr_holdings, nav_history.navs[first_date])
+    initial_value: Decimal = _calculate_portfolio_value(curr_units, nav_history.navs[first_date])
     pf_navs.append((first_date, base_nav))
 
     # Process remaining dates
     for date in relevant_dates[1:]:
         # Calculate value before today's transactions
-        curr_value: Decimal = _calculate_portfolio_value(curr_holdings, nav_history.navs[date])
+        curr_value: Decimal = _calculate_portfolio_value(curr_units, nav_history.navs[date])
         normalized_nav: Decimal = (curr_value / initial_value) * base_nav
         pf_navs.append((date, normalized_nav))
 
         # Process today's transactions if any
         for txn in txns_by_date[date]:
             delta = txn.units if txn.txn_type == TxnType.BUY else -txn.units
-            curr_holdings[txn.mf_name] += delta
+            curr_units[txn.mf_name] += delta
 
             # Adjust initial_value to maintain relative growth
             adjustment: Decimal = (delta * txn.nav) / normalized_nav * base_nav
