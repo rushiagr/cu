@@ -48,6 +48,8 @@ def calculate_pf_nav2(
 ) -> List[Tuple[datetime.date, Decimal]]:
     """Calculate portfolio NAV for all possible dates.
 
+    'unit-based' method discussed here: https://forum.valuepickr.com/t/how-to-track-ones-portfolio-effectively/564/5
+
     Returns NAVs for all dates in nav_history between first transaction and current_date
     Handles zero-value periods by maintaining last known NAV.
     """
