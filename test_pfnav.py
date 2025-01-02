@@ -57,6 +57,7 @@ def test_portfolio_nav_calculation2():
     jan2 = datetime.date(2024, 1, 2)
     jan3 = datetime.date(2024, 1, 3)
     jan4 = datetime.date(2024, 1, 4)
+    jan5 = datetime.date(2024, 1, 5)
 
     # Test scenario:
     # Jan 1: Buy MF1 100 units @ 100 (10,000)
@@ -75,8 +76,9 @@ def test_portfolio_nav_calculation2():
             jan2: {"MF1": Decimal("110"), "MF2": Decimal("110")},
             jan3: {"MF1": Decimal("121"), "MF2": Decimal("121")},
             jan4: {"MF1": Decimal("110"), "MF2": Decimal("110")},
+            jan5: {"MF1": Decimal("99"), "MF2": Decimal("88")},  # 10% drop and 20% drop respectively
         },
-        current_date=jan4,
+        current_date=jan5,
     )
 
     result = calculate_pf_nav(txns, nav_history)
@@ -99,6 +101,9 @@ def test_portfolio_nav_calculation2():
         (jan2, Decimal("1100.0")),
         (jan3, Decimal("1210.0")),
         (jan4, Decimal("1100.0")),
+        # By Jan 5, We have 50 units of MF1 NAV 99 (10% drop from 110) & 100 units of MF2 NAV 88 (20% drop from 110)
+        # Portfolio value = (50  99) + (100  88) = 4,950 + 8,800 = 13,750 (NAV 916.67 as qty is 150)
+        (jan5, Decimal("916.666666")),
     ]
 
     assert len(result) == len(expected)
