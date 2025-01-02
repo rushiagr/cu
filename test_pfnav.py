@@ -13,13 +13,7 @@ def test_portfolio_nav_calculation():
 
     # Transactions
     txns = [
-        MfTxn(
-            mf_name="MF1",
-            date=jan1,
-            txn_type=TxnType.BUY,
-            units=Decimal("100"),
-            nav=Decimal("100"),  # Though nav is in txn, we'll use nav_history
-        ),
+        MfTxn(mf_name="MF1", date=jan1, txn_type=TxnType.BUY, units=Decimal("100"), nav=Decimal("100")),
         MfTxn(mf_name="MF2", date=jan2, txn_type=TxnType.BUY, units=Decimal("100"), nav=Decimal("110")),
     ]
 
