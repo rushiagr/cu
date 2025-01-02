@@ -43,7 +43,7 @@ def _calculate_portfolio_value(units: DefaultDict[str, Decimal], navs: Dict[str,
     return sum(units[fund] * navs[fund] for fund in units if units[fund] != 0)  # noqa
 
 
-def calculate_pf_nav(
+def calculate_pf_nav2(
     txns: List[MfTxn], nav_history: NavHistory, base_nav: Decimal = Decimal("1000.0")
 ) -> List[Tuple[datetime.date, Decimal]]:
     """Calculate portfolio NAV for all possible dates.
@@ -70,9 +70,9 @@ def calculate_pf_nav(
     first_date: datetime.date = relevant_dates[0]
     for txn in txns_by_date[first_date]:
         curr_units[txn.mf_name] += txn.signed_units()
+    pf_navs.append((first_date, base_nav))
 
     initial_pf_value: Decimal = _calculate_portfolio_value(curr_units, nav_history.navs[first_date])
-    pf_navs.append((first_date, base_nav))
 
     # Process remaining dates
     for date in relevant_dates[1:]:
@@ -88,5 +88,51 @@ def calculate_pf_nav(
             # Adjust initial_pf_value to maintain relative growth
             adjustment: Decimal = (txn.signed_units() * txn.nav) / normalized_nav * base_nav
             initial_pf_value += adjustment
+
+    return pf_navs
+
+
+def calculate_pf_nav(
+    txns: List[MfTxn], nav_history: NavHistory, base_nav: Decimal = Decimal("1000.0")
+) -> List[Tuple[datetime.date, Decimal]]:
+    """
+    Calculate portfolio NAV using blog's unit-based approach.
+    """
+    portfolio_units = Decimal("0")  # Units in terms of portfolio NAV
+    portfolio_holdings = defaultdict(Decimal)  # fund -> actual units of fund
+    pf_navs = []
+
+    # Group transactions by date
+    txns_by_date = defaultdict(list)
+    for txn in txns:
+        txns_by_date[txn.date].append(txn)
+
+    # Get sorted dates
+    first_txn_date = min(txn.date for txn in txns)
+    all_dates = sorted(set(list(nav_history.navs.keys()) + [txn.date for txn in txns]))
+    relevant_dates = [date for date in all_dates if first_txn_date <= date <= nav_history.current_date]
+
+    for date in relevant_dates:
+        # First calculate NAV based on existing holdings
+        portfolio_value = sum(units * nav_history.navs[date][fund] for fund, units in portfolio_holdings.items())
+
+        current_nav = base_nav
+        if portfolio_units > 0:
+            current_nav = portfolio_value / portfolio_units
+
+        # Process transactions after NAV calculation (because transactions are considered to have happened at EOD)
+        for txn in txns_by_date[date]:
+            txn_value = txn.units * txn.nav
+            if portfolio_units == 0:
+                # First transaction - convert value to portfolio units at base_nav
+                portfolio_units = txn_value / base_nav
+            else:
+                # Subsequent transactions - convert value to portfolio units at current NAV
+                portfolio_units += txn_value / current_nav * txn.sign()
+
+            # Update actual fund holdings
+            portfolio_holdings[txn.mf_name] += txn.signed_units()
+
+        pf_navs.append((date, current_nav))
 
     return pf_navs
