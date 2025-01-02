@@ -49,6 +49,7 @@ def calculate_pf_nav2(
     """Calculate portfolio NAV for all possible dates.
 
     'unit-based' method discussed here: https://forum.valuepickr.com/t/how-to-track-ones-portfolio-effectively/564/5
+        text copied: https://gist.github.com/rushiagr/1bb9f6433f6610952972c88364e9c7ad
 
     Returns NAVs for all dates in nav_history between first transaction and current_date
     Handles zero-value periods by maintaining last known NAV.
