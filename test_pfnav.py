@@ -2,7 +2,7 @@ import datetime
 from collections import defaultdict
 from decimal import Decimal
 
-from pfnav import MfTxn, NavHistory, TxnType, calculate_pf_nav
+from pfnav import MfTxn, NavHistory, TxnType, calculate_pf_nav, calculate_pf_nav2
 
 
 def test_portfolio_nav_calculation():
@@ -31,6 +31,7 @@ def test_portfolio_nav_calculation():
 
     # Calculate portfolio NAV
     result = calculate_pf_nav(txns, nav_history)
+    result2 = calculate_pf_nav2(txns, nav_history)
 
     # Expected values based on your example:
     # Jan 1: Base NAV = 1000
@@ -47,6 +48,11 @@ def test_portfolio_nav_calculation():
 
     assert len(result) == len(expected)
     for (date, nav), (exp_date, exp_nav) in zip(result, expected):
+        assert date == exp_date
+        assert nav == exp_nav, f"On {date}, expected NAV {exp_nav} but got {nav}"
+
+    assert len(result2) == len(expected)
+    for (date, nav), (exp_date, exp_nav) in zip(result2, expected):
         assert date == exp_date
         assert nav == exp_nav, f"On {date}, expected NAV {exp_nav} but got {nav}"
 
@@ -82,6 +88,7 @@ def test_portfolio_nav_calculation2():
     )
 
     result = calculate_pf_nav(txns, nav_history)
+    result2 = calculate_pf_nav2(txns, nav_history)
 
     # Let's calculate expected values:
     # Jan 1: Initial investment 10,000 -> NAV 1000
@@ -111,6 +118,11 @@ def test_portfolio_nav_calculation2():
         assert date == exp_date
         assert abs(nav - exp_nav) < Decimal("0.1"), f"On {date}, expected NAV {exp_nav} but got {nav}"
 
+    assert len(result2) == len(expected)
+    for (date, nav), (exp_date, exp_nav) in zip(result2, expected):
+        assert date == exp_date
+        assert abs(nav - exp_nav) < Decimal("0.1"), f"On {date}, expected NAV {exp_nav} but got {nav}"
+
     # Additional assertions to verify portfolio composition
     final_units = defaultdict(Decimal)
     for txn in txns:
@@ -118,3 +130,56 @@ def test_portfolio_nav_calculation2():
 
     assert final_units["MF1"] == Decimal("50")  # Started with 100, sold 50
     assert final_units["MF2"] == Decimal("100")  # Bought 100, no sells
+
+
+def test_nav_with_full_withdrawal():
+    jan1 = datetime.date(2024, 1, 1)
+    jan2 = datetime.date(2024, 1, 2)
+    jan3 = datetime.date(2024, 1, 3)
+    jan4 = datetime.date(2024, 1, 4)
+
+    txns = [
+        # Initial investment: 100 units at 100
+        MfTxn(mf_name="MF1", date=jan1, txn_type=TxnType.BUY, units=Decimal("100"), nav=Decimal("100")),
+        # Value rises 10%, full withdrawal at 110
+        MfTxn(mf_name="MF1", date=jan2, txn_type=TxnType.SELL, units=Decimal("100"), nav=Decimal("110")),
+        # No holdings on jan3, NAV should stay at 1100
+        # Re-entry on jan4, buying 50 units at 120
+        MfTxn(mf_name="MF1", date=jan4, txn_type=TxnType.BUY, units=Decimal("50"), nav=Decimal("120")),
+    ]
+
+    nav_history = NavHistory(
+        navs={
+            jan1: {"MF1": Decimal("100")},
+            jan2: {"MF1": Decimal("110")},
+            jan3: {"MF1": Decimal("115")},  # Market keeps moving
+            jan4: {"MF1": Decimal("120")},
+        },
+        current_date=jan4,
+    )
+
+    result = calculate_pf_nav(txns, nav_history)
+    result2 = calculate_pf_nav2(txns, nav_history)
+
+    # Expected:
+    # Jan 1: NAV = 1000 (base)
+    # Jan 2: NAV = 1100 (10% up, then full withdrawal)
+    # Jan 3: NAV = 1100 (frozen, no holdings)
+    # Jan 4: NAV starts at 1100, then reflects performance of new investment
+
+    expected = [
+        (jan1, Decimal("1000.0")),
+        (jan2, Decimal("1100.0")),
+        (jan3, Decimal("1100.0")),
+        (jan4, Decimal("1100.0")),  # Initial NAV before processing day's txn
+    ]
+
+    assert len(result) == len(expected)
+    for (date, nav), (exp_date, exp_nav) in zip(result, expected):
+        assert date == exp_date
+        assert nav == exp_nav
+
+    assert len(result2) == len(expected)
+    for (date, nav), (exp_date, exp_nav) in zip(result2, expected):
+        assert date == exp_date
+        assert nav == exp_nav, f"On {date}, expected NAV {exp_nav} but got {nav}"
