@@ -87,6 +87,6 @@ def calculate_pf_nav(
 
             # Adjust initial_pf_value to maintain relative growth
             adjustment: Decimal = (txn.signed_units() * txn.nav) / normalized_nav * base_nav
-            initial_pf_value += adjustment * txn.sign()
+            initial_pf_value += adjustment
 
     return pf_navs
