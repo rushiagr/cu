@@ -2,7 +2,7 @@ import datetime
 from collections import defaultdict
 from decimal import Decimal
 
-from pfnav import MfTxn, NavHistory, TxnType, calculate_pf_nav, calculate_pf_nav2
+from pfnav import NavHistory, Transaction, TransactionType, calculate_pf_nav, calculate_pf_nav2
 
 
 def test_portfolio_nav_calculation():
@@ -14,8 +14,8 @@ def test_portfolio_nav_calculation():
 
     # Transactions
     txns = [
-        MfTxn(mf_name="MF1", date=jan1, txn_type=TxnType.BUY, units=Decimal("100"), nav=Decimal("100")),
-        MfTxn(mf_name="MF2", date=jan2, txn_type=TxnType.BUY, units=Decimal("100"), nav=Decimal("110")),
+        Transaction(mf_name="MF1", date=jan1, txn_type=TransactionType.BUY, units=Decimal("100"), nav=Decimal("100")),
+        Transaction(mf_name="MF2", date=jan2, txn_type=TransactionType.BUY, units=Decimal("100"), nav=Decimal("110")),
     ]
 
     # NAV history including all dates and funds
@@ -71,9 +71,9 @@ def test_portfolio_nav_calculation2():
     # Jan 3: Both rise ~10% + Sell 50 units of MF1 @ 121
     # Jan 4: Both drop back to 110
     txns = [
-        MfTxn(mf_name="MF1", date=jan1, txn_type=TxnType.BUY, units=Decimal("100"), nav=Decimal("100")),
-        MfTxn(mf_name="MF2", date=jan2, txn_type=TxnType.BUY, units=Decimal("100"), nav=Decimal("110")),
-        MfTxn(mf_name="MF1", date=jan3, txn_type=TxnType.SELL, units=Decimal("50"), nav=Decimal("121")),
+        Transaction(mf_name="MF1", date=jan1, txn_type=TransactionType.BUY, units=Decimal("100"), nav=Decimal("100")),
+        Transaction(mf_name="MF2", date=jan2, txn_type=TransactionType.BUY, units=Decimal("100"), nav=Decimal("110")),
+        Transaction(mf_name="MF1", date=jan3, txn_type=TransactionType.SELL, units=Decimal("50"), nav=Decimal("121")),
     ]
 
     nav_history = NavHistory(
@@ -140,12 +140,12 @@ def test_nav_with_full_withdrawal():
 
     txns = [
         # Initial investment: 100 units at 100
-        MfTxn(mf_name="MF1", date=jan1, txn_type=TxnType.BUY, units=Decimal("100"), nav=Decimal("100")),
+        Transaction(mf_name="MF1", date=jan1, txn_type=TransactionType.BUY, units=Decimal("100"), nav=Decimal("100")),
         # Value rises 10%, full withdrawal at 110
-        MfTxn(mf_name="MF1", date=jan2, txn_type=TxnType.SELL, units=Decimal("100"), nav=Decimal("110")),
+        Transaction(mf_name="MF1", date=jan2, txn_type=TransactionType.SELL, units=Decimal("100"), nav=Decimal("110")),
         # No holdings on jan3, NAV should stay at 1100
         # Re-entry on jan4, buying 50 units at 120
-        MfTxn(mf_name="MF1", date=jan4, txn_type=TxnType.BUY, units=Decimal("50"), nav=Decimal("120")),
+        Transaction(mf_name="MF1", date=jan4, txn_type=TransactionType.BUY, units=Decimal("50"), nav=Decimal("120")),
     ]
 
     nav_history = NavHistory(

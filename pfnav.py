@@ -6,16 +6,16 @@ from decimal import Decimal
 from typing import DefaultDict, Dict, List, Tuple
 
 
-class TxnType(enum.Enum):
+class TransactionType(enum.Enum):
     BUY: str = "BUY"
     SELL: str = "SELL"
 
 
 @dataclass
-class MfTxn:
+class Transaction:
     mf_name: str
     date: datetime.date
-    txn_type: TxnType
+    txn_type: TransactionType
     units: Decimal
     nav: Decimal
 
@@ -25,17 +25,25 @@ class MfTxn:
 
     def sign(self) -> int:
         """Return sign based on transaction type, i.e. +1 for BUY and -1 for SELL."""
-        return 1 if self.txn_type == TxnType.BUY else -1
+        return 1 if self.txn_type == TransactionType.BUY else -1
 
 
 @dataclass
 class NavHistory:
-    """Stores NAV for all mutual funds for all transaction dates and current date"""
+    """Repository of all NAVs of all mutual funds."""
 
-    # ASSUMPTION: NAVs are available for all transaction dates and current date, for all funds
-    # date -> (mf_name -> nav) mapping
+    # navs is a dictionary of NAV date -> fund name -> NAV
     navs: Dict[datetime.date, Dict[str, Decimal]]
     current_date: datetime.date
+
+    def get_all_dates_sorted(self) -> List[datetime.date]:
+        return sorted(self.navs.keys())
+
+
+# Assumptions for calculate_pf_nav() function (TODO: add checks for the same):
+#   - transaction dates are sorted in ascending order (i.e. oldest first)
+#   - all transaction dates are present in nav_history, i.e. NAV is available for all transaction dates of respective
+#     mutual funds
 
 
 def _calculate_portfolio_value(units: DefaultDict[str, Decimal], navs: Dict[str, Decimal]) -> Decimal:
@@ -44,7 +52,7 @@ def _calculate_portfolio_value(units: DefaultDict[str, Decimal], navs: Dict[str,
 
 
 def calculate_pf_nav2(
-    txns: List[MfTxn], nav_history: NavHistory, base_nav: Decimal = Decimal("1000.0")
+    txns: List[Transaction], nav_history: NavHistory, base_nav: Decimal = Decimal("1000.0")
 ) -> List[Tuple[datetime.date, Decimal]]:
     """Calculate portfolio NAV for all possible dates.
 
@@ -54,20 +62,24 @@ def calculate_pf_nav2(
     Returns NAVs for all dates in nav_history between first transaction and current_date
     Handles zero-value periods by maintaining last known NAV.
     """
+
+    # basic sanity checks
+    if not txns:
+        raise ValueError("No transactions provided")
+
     # curr_units stores current units (as of the last transaction processed) for each mutual fund
     curr_units: DefaultDict[str, Decimal] = defaultdict(Decimal)
     # pf_navs stores the portfolio NAV for each date. This is what gets returned by this func
     pf_navs: List[Tuple[datetime.date, Decimal]] = []
     last_nav = base_nav  # Track last known NAV for zero-value periods
 
-    # Get all dates to process (transactions + intermediate dates + current date)
-    first_txn_date = min(txn.date for txn in txns)
-    all_dates: List[datetime.date] = sorted(set(list(nav_history.navs.keys()) + [txn.date for txn in txns]))
     # Filter dates between first transaction and current date inclusive
-    relevant_dates = [date for date in all_dates if first_txn_date <= date <= nav_history.current_date]
+    relevant_dates = [
+        date for date in nav_history.get_all_dates_sorted() if txns[0].date <= date <= nav_history.current_date
+    ]
 
     # Group transactions by date for efficient processing
-    txns_by_date: Dict[datetime.date, List[MfTxn]] = defaultdict(list)
+    txns_by_date: Dict[datetime.date, List[Transaction]] = defaultdict(list)
     for txn in txns:
         txns_by_date[txn.date].append(txn)
 
@@ -103,7 +115,7 @@ def calculate_pf_nav2(
             curr_units[txn.mf_name] += txn.signed_units()
 
             # If this is a re-entry after zero value
-            if curr_pf_value == 0 and txn.txn_type == TxnType.BUY:
+            if curr_pf_value == 0 and txn.txn_type == TransactionType.BUY:
                 # Reset initial_pf_value relative to last known NAV
                 initial_pf_value = (txn.units * txn.nav) / last_nav * base_nav
             else:
@@ -115,12 +127,17 @@ def calculate_pf_nav2(
 
 
 def calculate_pf_nav(
-    txns: List[MfTxn], nav_history: NavHistory, base_nav: Decimal = Decimal("1000.0")
+    txns: List[Transaction], nav_history: NavHistory, base_nav: Decimal = Decimal("1000.0")
 ) -> List[Tuple[datetime.date, Decimal]]:
     """
     Calculate portfolio NAV using blog's unit-based approach.
     During zero-value periods (full withdrawal), NAV remains frozen at last known value.
     """
+
+    # basic sanity checks
+    if not txns:
+        raise ValueError("No transactions provided")
+
     portfolio_units = Decimal("0")  # Units in terms of portfolio NAV
     portfolio_holdings = defaultdict(Decimal)  # fund -> actual units of fund
     pf_navs = []
@@ -132,9 +149,9 @@ def calculate_pf_nav(
         txns_by_date[txn.date].append(txn)
 
     # Get sorted dates
-    first_txn_date = min(txn.date for txn in txns)
-    all_dates = sorted(set(list(nav_history.navs.keys()) + [txn.date for txn in txns]))
-    relevant_dates = [date for date in all_dates if first_txn_date <= date <= nav_history.current_date]
+    relevant_dates = [
+        date for date in nav_history.get_all_dates_sorted() if txns[0].date <= date <= nav_history.current_date
+    ]
 
     for date in relevant_dates:
         # First calculate NAV based on existing holdings
