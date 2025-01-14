@@ -1,14 +1,14 @@
 [tool.isort]
 profile = "black"
-line_length = 120
+line_length = 120   # wrap lines at 120 chars (default was 80 chars)
 
 [tool.black]
-line-length = 120
+line-length = 120   # wrap lines at 120 chars (default was 80 chars)
 extend-exclude = '''
 # A regex preceded with ^/ will apply only to files and directories
 # in the root of the project.
 ^/\.venv
-'''
+'''  # exclude .venv/ directory, if present, from black formatting
 
 
 
@@ -22,5 +22,5 @@ filterwarnings = [
 
 
 [tool.ruff]
-line-length = 120
+line-length = 120  # wrap lines at 120 chars (default was 80 chars)
 lint.ignore = ["E721"]
