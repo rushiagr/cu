@@ -2,7 +2,7 @@ import datetime
 from collections import defaultdict
 from decimal import Decimal
 
-from pfnav import NavManager, Transaction, TransactionType, calculate_pf_nav, calculate_pf_nav2
+from pfnav import NavManager, Transaction, TransactionType, calculate_pf_nav
 
 
 def test_portfolio_nav_calculation():
@@ -31,7 +31,6 @@ def test_portfolio_nav_calculation():
 
     # Calculate portfolio NAV
     result = calculate_pf_nav(txns, nav_history)
-    result2 = calculate_pf_nav2(txns, nav_history)
 
     # Expected values based on your example:
     # Jan 1: Base NAV = 1000
@@ -48,11 +47,6 @@ def test_portfolio_nav_calculation():
 
     assert len(result) == len(expected)
     for (date, nav), (exp_date, exp_nav) in zip(result, expected):
-        assert date == exp_date
-        assert nav == exp_nav, f"On {date}, expected NAV {exp_nav} but got {nav}"
-
-    assert len(result2) == len(expected)
-    for (date, nav), (exp_date, exp_nav) in zip(result2, expected):
         assert date == exp_date
         assert nav == exp_nav, f"On {date}, expected NAV {exp_nav} but got {nav}"
 
@@ -88,7 +82,6 @@ def test_portfolio_nav_calculation2():
     )
 
     result = calculate_pf_nav(txns, nav_history)
-    result2 = calculate_pf_nav2(txns, nav_history)
 
     # Let's calculate expected values:
     # Jan 1: Initial investment 10,000 -> NAV 1000
@@ -115,11 +108,6 @@ def test_portfolio_nav_calculation2():
 
     assert len(result) == len(expected)
     for (date, nav), (exp_date, exp_nav) in zip(result, expected):
-        assert date == exp_date
-        assert abs(nav - exp_nav) < Decimal("0.1"), f"On {date}, expected NAV {exp_nav} but got {nav}"
-
-    assert len(result2) == len(expected)
-    for (date, nav), (exp_date, exp_nav) in zip(result2, expected):
         assert date == exp_date
         assert abs(nav - exp_nav) < Decimal("0.1"), f"On {date}, expected NAV {exp_nav} but got {nav}"
 
@@ -159,7 +147,6 @@ def test_nav_with_full_withdrawal():
     )
 
     result = calculate_pf_nav(txns, nav_history)
-    result2 = calculate_pf_nav2(txns, nav_history)
 
     # Expected:
     # Jan 1: NAV = 1000 (base)
@@ -178,8 +165,3 @@ def test_nav_with_full_withdrawal():
     for (date, nav), (exp_date, exp_nav) in zip(result, expected):
         assert date == exp_date
         assert nav == exp_nav
-
-    assert len(result2) == len(expected)
-    for (date, nav), (exp_date, exp_nav) in zip(result2, expected):
-        assert date == exp_date
-        assert nav == exp_nav, f"On {date}, expected NAV {exp_nav} but got {nav}"
