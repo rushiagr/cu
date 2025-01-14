@@ -2,7 +2,7 @@ import datetime
 from collections import defaultdict
 from decimal import Decimal
 
-from pfnav import NavHistory, Transaction, TransactionType, calculate_pf_nav, calculate_pf_nav2
+from pfnav import NavManager, Transaction, TransactionType, calculate_pf_nav, calculate_pf_nav2
 
 
 def test_portfolio_nav_calculation():
@@ -19,7 +19,7 @@ def test_portfolio_nav_calculation():
     ]
 
     # NAV history including all dates and funds
-    nav_history = NavHistory(
+    nav_history = NavManager(
         navs={
             jan1: {"MF1": Decimal("100"), "MF2": Decimal("100")},  # Not used but available
             jan2: {"MF1": Decimal("110"), "MF2": Decimal("110")},
@@ -76,7 +76,7 @@ def test_portfolio_nav_calculation2():
         Transaction(mf_name="MF1", date=jan3, txn_type=TransactionType.SELL, units=Decimal("50"), nav=Decimal("121")),
     ]
 
-    nav_history = NavHistory(
+    nav_history = NavManager(
         navs={
             jan1: {"MF1": Decimal("100"), "MF2": Decimal("100")},
             jan2: {"MF1": Decimal("110"), "MF2": Decimal("110")},
@@ -148,7 +148,7 @@ def test_nav_with_full_withdrawal():
         Transaction(mf_name="MF1", date=jan4, txn_type=TransactionType.BUY, units=Decimal("50"), nav=Decimal("120")),
     ]
 
-    nav_history = NavHistory(
+    nav_history = NavManager(
         navs={
             jan1: {"MF1": Decimal("100")},
             jan2: {"MF1": Decimal("110")},
