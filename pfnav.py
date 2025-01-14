@@ -138,47 +138,41 @@ def calculate_pf_nav(
     if not txns:
         raise ValueError("No transactions provided")
 
-    portfolio_units = Decimal("0")  # Units in terms of portfolio NAV
-    portfolio_holdings = defaultdict(Decimal)  # fund -> actual units of fund
-    pf_navs = []
-    last_nav = base_nav  # Track last known NAV for zero-value periods
-
     # Group transactions by date
-    txns_by_date = defaultdict(list)
-    for txn in txns:
-        txns_by_date[txn.date].append(txn)
-
     # Get sorted dates
     relevant_dates = [
         date for date in nav_history.get_all_dates_sorted() if txns[0].date <= date <= nav_history.current_date
     ]
 
-    for date in relevant_dates:
-        # First calculate NAV based on existing holdings
-        portfolio_value = sum(units * nav_history.navs[date][fund] for fund, units in portfolio_holdings.items())
+    if not relevant_dates:
+        raise ValueError("No relevant dates found")
 
-        # If we have units, calculate NAV normally
-        if portfolio_units > 0:
+    txns_by_date = defaultdict(list)
+    for txn in txns:
+        txns_by_date[txn.date].append(txn)
+
+    portfolio_units = Decimal("0")  # Units held in portfolio
+    portfolio_holdings = defaultdict(Decimal)  # mapping of fund name -> actual units of fund
+
+    pf_navs = []
+    last_nav = base_nav  # Track last known NAV for zero-value periods
+
+    for date in relevant_dates:
+
+        if portfolio_units == 0:
+            current_nav = last_nav  # if no units left for the given date, then use NAV of last date
+        else:
+            portfolio_value = sum(units * nav_history.navs[date][fund] for fund, units in portfolio_holdings.items())
             current_nav = portfolio_value / portfolio_units
             last_nav = current_nav  # Remember this NAV
-        else:
-            # No units - use last known NAV
-            current_nav = last_nav
 
-        # Process transactions after NAV calculation (because transactions are considered to have happened at EOD)
+        # Because today's transactions are processed at EOD i.e. AFTER today's NAV calculation, we know today's NAV now
+        pf_navs.append((date, current_nav))
+
         for txn in txns_by_date[date]:
             txn_value = txn.units * txn.nav
-            if portfolio_units == 0:
-                # First transaction - convert value to portfolio units at base_nav - or re-entry after zero value
-                # Use last_nav instead of base_nav for re-entry
-                portfolio_units = txn_value / last_nav
-            else:
-                # Subsequent transactions - convert value to portfolio units at current NAV
-                portfolio_units += txn_value / current_nav * txn.sign()
-
-            # Update actual fund holdings
+            # convert value to portfolio units at current NAV, and add to / subtract from portfolio_units
+            portfolio_units += txn_value / current_nav * txn.sign()
             portfolio_holdings[txn.mf_name] += txn.signed_units()
-
-        pf_navs.append((date, current_nav))
 
     return pf_navs
