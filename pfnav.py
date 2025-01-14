@@ -64,25 +64,34 @@ def _calculate_portfolio_value(units: DefaultDict[str, Decimal], navs: Dict[str,
 
 
 def calculate_pf_nav(
-        txns: List[Transaction], nav_mgr: NavManager, base_nav: Decimal = Decimal("1000.0")
+    txns: List[Transaction], nav_mgr: NavManager, base_nav: Decimal = Decimal("1000.0")
 ) -> List[Tuple[datetime.date, Decimal]]:
     """
-    Calculate portfolio NAV using blog's unit-based approach.
-    During zero-value periods (full withdrawal), NAV remains frozen at last known value.
+    Calculate portfolio NAV based on transactions and NAV history.
+
+    Based on the 'unit based' approach to calculate portfolio NAV, as discussed here:
+    https://forum.valuepickr.com/t/how-to-track-ones-portfolio-effectively/564/5.
+
+    All transactions which happen on a day are considered to be happened at the end of the day. Meaning today's NAV will
+    be calculated before processing today's transactions (so today's transactions will only affect tomorrow's NAV).
+
+    If for a particular day, there are no holdings present (meaning total holding value = 0), then the NAV of the last
+    known date is used for that day.
+
+    Full text of the approach (copied to avoid link rot affecting us):
+        https://gist.github.com/rushiagr/1bb9f6433f6610952972c88364e9c7ad
     """
 
     # basic sanity checks
     if not txns:
         raise ValueError("No transactions provided")
 
-    # Group transactions by date
-    # Get sorted dates
     relevant_dates = [date for date in nav_mgr.get_all_dates_sorted() if txns[0].date <= date <= nav_mgr.current_date]
 
     if not relevant_dates:
         raise ValueError("No relevant dates found")
 
-    txns_by_date = defaultdict(list)
+    txns_by_date: DefaultDict[datetime.date, List[Transaction]] = defaultdict(list)
     for txn in txns:
         txns_by_date[txn.date].append(txn)
 
@@ -92,7 +101,7 @@ def calculate_pf_nav(
     curr_mf_units: Dict[str, Decimal] = defaultdict(Decimal)  # Units of each mutual fund in the portfolio at this time
 
     pf_navs: List[Tuple[datetime.date, Decimal]] = []  # the final return value, sorted tuples of (date, NAV)
-    current_nav = base_nav
+    current_nav: Decimal = base_nav
 
     for date in relevant_dates:
 
@@ -104,7 +113,7 @@ def calculate_pf_nav(
 
         # NOW process today's transactions
         for txn in txns_by_date[date]:
-            # convert value to portfolio units at current NAV, and add to / subtract from portfolio_units
+            # convert value of transaction to portfolio units at current NAV, and add to / subtract from portfolio_units
             portfolio_units += txn.signed_value() / current_nav
             curr_mf_units[txn.mf_name] += txn.signed_units()
 
