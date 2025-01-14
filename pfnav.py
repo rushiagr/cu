@@ -69,6 +69,9 @@ def calculate_pf_nav(
     """
     Calculate portfolio NAV based on transactions and NAV history.
 
+    Returns a list of tuples of (date, NAV) for each date in the NAV history from the first transaction date to the
+    current date.
+
     Based on the 'unit based' approach to calculate portfolio NAV, as discussed here:
     https://forum.valuepickr.com/t/how-to-track-ones-portfolio-effectively/564/5.
 
