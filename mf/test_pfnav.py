@@ -2,7 +2,7 @@ import datetime
 from collections import defaultdict
 from decimal import Decimal
 
-from pfnav import NavManager, Transaction, TransactionType, calculate_pf_nav
+from mf.pfnav import NavManager, Transaction, TransactionType, calculate_pf_nav
 
 
 def test_portfolio_nav_calculation():

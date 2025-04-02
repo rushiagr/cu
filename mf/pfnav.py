@@ -28,7 +28,7 @@ class Transaction:
         return 1 if self.txn_type == TransactionType.BUY else -1
 
     def value(self) -> Decimal:
-        """The 'value' of the transaction, i.e. units * NAV."""
+        """The monetary 'value' of the transaction, i.e. units * NAV."""
         return self.units * self.nav
 
     def signed_value(self) -> Decimal:
@@ -45,6 +45,7 @@ class NavManager:
     current_date: datetime.date
 
     def get_all_dates_sorted(self) -> List[datetime.date]:
+        """Returns all dates in the NAV history, sorted in ascending order."""
         return sorted(self.navs.keys())
 
     def get_portfolio_value(self, date: datetime.date, mf_units: Dict[str, Decimal]) -> Decimal:
@@ -53,6 +54,7 @@ class NavManager:
 
 
 # Assumptions for calculate_pf_nav() function (TODO: add checks for the same):
+#   - all mutual fund transactions have a 'nav' value present i.e. it's not empty/null
 #   - transaction dates are sorted in ascending order (i.e. oldest first)
 #   - all transaction dates are present in nav_mgr, i.e. NAV is available for all transaction dates of respective
 #     mutual funds
@@ -98,13 +100,17 @@ def calculate_pf_nav(
     for txn in txns:
         txns_by_date[txn.date].append(txn)
 
-    # If we consider portfolio NAV as NAV of one PF 'unit', portfolio_units is the number of units the portfolio holds.
+    # If we consider portfolio NAV as NAV of one PF 'unit', portfolio_units is the number of such units the pf holds.
     # For example, if current PF NAV is 100, and portfolio value is 2000, portfolio_units would be 2000 / 100 = 20
     portfolio_units: Decimal = Decimal("0")
-    curr_mf_units: Dict[str, Decimal] = defaultdict(Decimal)  # Units of each mutual fund in the portfolio at this time
 
-    pf_navs: List[Tuple[datetime.date, Decimal]] = []  # the final return value, sorted tuples of (date, NAV)
+    # Units of each mutual fund in the portfolio at this time
+    curr_mf_units: Dict[str, Decimal] = defaultdict(Decimal)
+
     current_nav: Decimal = base_nav
+
+    # the final return value, sorted tuples of (date, NAV)
+    pf_navs: List[Tuple[datetime.date, Decimal]] = []
 
     for date in relevant_dates:
 
