@@ -3,6 +3,9 @@
 # IntelliJ IDE config files
 .idea/*
 
+# blob files to ignore
+*.pdf
+
 # .pyc
 *.pyc
 __pycache___/*
